@@ -1,35 +1,30 @@
 <?php
-// config.php
-error_log('CONFIG LOADED FROM RAILWAY');
+// config.php — конфиг под Railway
+
+// Для отладки: видно в логах, что конфиг вообще загрузился
+error_log('CONFIG LOADED (Railway)');
+
 $databaseUrl = getenv('DATABASE_URL');
-
-if ($databaseUrl) {
-    // Работаем в Railway: парсим DATABASE_URL
-    $parts = parse_url($databaseUrl);
-    if ($parts === false) {
-        throw new RuntimeException('Invalid DATABASE_URL');
-    }
-
-    $host = $parts['host'] ?? 'localhost';
-    $port = $parts['port'] ?? 5432;
-    $name = isset($parts['path']) ? ltrim($parts['path'], '/') : '';
-    $user = $parts['user'] ?? 'postgres';
-    $pass = $parts['pass'] ?? '';
-
-} else {
-    // Локальная разработка
-    $host = '127.0.0.1';
-    $port = 5432;
-    $name = 'music_store';
-    $user = 'postgres';
-    $pass = 'postgres'; // твой локальный пароль
-
+if (!$databaseUrl) {
+    // Никаких локальных дефолтов — если переменная не задана, сразу падаем
+    throw new RuntimeException('DATABASE_URL is not set in environment');
 }
 
-// Собираем DSN
+$parts = parse_url($databaseUrl);
+if ($parts === false || !isset($parts['host'], $parts['path'])) {
+    throw new RuntimeException('Invalid DATABASE_URL: ' . $databaseUrl);
+}
+
+$host = $parts['host'];
+$port = $parts['port'] ?? 5432;
+$name = ltrim($parts['path'], '/');
+$user = $parts['user'] ?? 'postgres';
+$pass = $parts['pass'] ?? '';
+
+// Собираем DSN для PDO
 $dsn = sprintf('pgsql:host=%s;port=%d;dbname=%s', $host, $port, $name);
 
-// На всякий случай логируем, какой DSN реально используется
+// Логируем только хост и БД (без пароля)
 error_log('DB DSN USED: ' . $dsn);
 
 return [
@@ -39,7 +34,7 @@ return [
         'password' => $pass,
     ],
 
-    // остальной конфиг почты и т.п.
+    // Почта — как у тебя была (можно тоже вынести в env по желанию)
     'mail' => [
         'host'        => getenv('MAIL_HOST')        ?: 'smtp.mail.ru',
         'username'    => getenv('MAIL_USER')        ?: 'alexander.mailing.list.box.1@mail.ru',
