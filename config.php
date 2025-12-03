@@ -1,35 +1,42 @@
 <?php
 // config.php
 
-$railway = getenv('RAILWAY_ENVIRONMENT') || getenv('RAILWAY_PROJECT_ID');
+$databaseUrl = getenv('DATABASE_URL');
 
-if ($railway) {
-    // Работаем в Railway
-    $dsn  = 'pgsql:host=postgres.railway.internal;port=5432;dbname=railway';
-    $user = 'postgres';
-    $pass = 'ТВОЙ_ПАРОЛЬ_ОТ_RAILWAY';
+if ($databaseUrl) {
+    // Работаем в Railway: парсим DATABASE_URL
+    $parts = parse_url($databaseUrl);
+    if ($parts === false) {
+        throw new RuntimeException('Invalid DATABASE_URL');
+    }
+
+    $host = $parts['host'] ?? 'localhost';
+    $port = $parts['port'] ?? 5432;
+    $name = isset($parts['path']) ? ltrim($parts['path'], '/') : '';
+    $user = $parts['user'] ?? 'postgres';
+    $pass = $parts['pass'] ?? '';
+
 } else {
     // Локальная разработка
-    $host = getenv('DB_HOST') ?: '127.0.0.1';
-    $port = getenv('DB_PORT') ?: '5432';
-    $name = getenv('DB_NAME') ?: 'music_store';
+    $host = '127.0.0.1';
+    $port = 5432;
+    $name = 'music_store';
+    $user = 'postgres';
+    $pass = 'postgres'; // твой локальный пароль
 
-    $dsn = getenv('DB_DSN') ?: sprintf(
-        'pgsql:host=%s;port=%s;dbname=%s',
-        $host,
-        $port,
-        $name
-    );
-
-    $user = getenv('DB_USER')     ?: 'postgres';
-    $pass = getenv('DB_PASSWORD') ?: 'postgres';
 }
+
+// Собираем DSN
+$dsn = sprintf('pgsql:host=%s;port=%d;dbname=%s', $host, $port, $name);
+
+// На всякий случай логируем, какой DSN реально используется
+error_log('DB DSN USED: ' . $dsn);
 
 return [
     'db' => [
         'dsn'      => $dsn,
-        'user'     => getenv('DB_USER')     ?: 'postgres',
-        'password' => getenv('DB_PASSWORD') ?: 'postgres',
+        'user'     => $user,
+        'password' => $pass,
     ],
 
     // остальной конфиг почты и т.п.
