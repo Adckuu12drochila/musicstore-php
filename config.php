@@ -1,6 +1,6 @@
 <?php
 // config.php
-
+error_log('CONFIG LOADED FROM RAILWAY');
 $databaseUrl = getenv('DATABASE_URL');
 
 if ($databaseUrl) {
