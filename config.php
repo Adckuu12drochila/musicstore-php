@@ -1,30 +1,30 @@
 <?php
-// config.php — конфиг под Railway
+// config.php — только Railway
 
-// Для отладки: видно в логах, что конфиг вообще загрузился
-error_log('CONFIG LOADED (Railway)');
-
+// 1. Пытаемся взять строку подключения из переменной окружения DATABASE_URL
 $databaseUrl = getenv('DATABASE_URL');
+
+// 2. Если переменной нет — жёстко прописываем строку от Railway
 if (!$databaseUrl) {
-    // Никаких локальных дефолтов — если переменная не задана, сразу падаем
-    throw new RuntimeException('DATABASE_URL is not set in environment');
+    $databaseUrl = 'postgresql://postgres:cnnupLLTsUgpYHdfILyYNfKDyaFcZNQU@postgres.railway.internal:5432/railway';
 }
 
+// 3. Разбираем URL
 $parts = parse_url($databaseUrl);
-if ($parts === false || !isset($parts['host'], $parts['path'])) {
+if ($parts === false) {
     throw new RuntimeException('Invalid DATABASE_URL: ' . $databaseUrl);
 }
 
-$host = $parts['host'];
+$host = $parts['host'] ?? 'postgres.railway.internal';
 $port = $parts['port'] ?? 5432;
-$name = ltrim($parts['path'], '/');
+$name = isset($parts['path']) ? ltrim($parts['path'], '/') : 'railway';
 $user = $parts['user'] ?? 'postgres';
 $pass = $parts['pass'] ?? '';
 
-// Собираем DSN для PDO
+// 4. Собираем DSN для PDO
 $dsn = sprintf('pgsql:host=%s;port=%d;dbname=%s', $host, $port, $name);
 
-// Логируем только хост и БД (без пароля)
+// Немного логов в stderr (видно в Railway Logs)
 error_log('DB DSN USED: ' . $dsn);
 
 return [
@@ -34,7 +34,6 @@ return [
         'password' => $pass,
     ],
 
-    // Почта — как у тебя была (можно тоже вынести в env по желанию)
     'mail' => [
         'host'        => getenv('MAIL_HOST')        ?: 'smtp.mail.ru',
         'username'    => getenv('MAIL_USER')        ?: 'alexander.mailing.list.box.1@mail.ru',
