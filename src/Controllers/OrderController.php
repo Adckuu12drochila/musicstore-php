@@ -188,19 +188,26 @@ class OrderController
         }
 
         // 9) Письма
-        $mailer = new Mailer($this->mailConfig);
-        if ($order && !empty($order['user_email'])) {
-            $mailer->sendOrderConfirmation(
-                $order['user_email'],
-                $order['client_name'],
-                $order
-            );
-        }
-        if ($order) {
-            $mailer->sendNewOrderNotification(
-                $this->mailConfig['admin_email'],
-                $order
-            );
+        try {
+            $mailer = new Mailer($this->mailConfig);
+
+            if ($order && !empty($order['user_email'])) {
+                $mailer->sendOrderConfirmation(
+                    $order['user_email'],
+                    $order['client_name'],
+                    $order
+                );
+            }
+
+            if ($order) {
+                $mailer->sendNewOrderNotification(
+                    $this->mailConfig['admin_email'],
+                    $order
+                );
+            }
+        } catch (\Throwable $e) {
+            // Даже если что-то пошло совсем не так — просто пишем в лог, заказ сохраняем
+            error_log('MAIL FATAL ERROR: ' . $e->getMessage());
         }
 
         // 10) Редирект по способу оплаты
